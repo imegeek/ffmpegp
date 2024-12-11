@@ -1,6 +1,6 @@
 <div align="center">
 <kbd>
-  <img src="https://github.com/user-attachments/assets/73fc18dd-ae11-47d2-ad9a-3f6adcdcdda5" alt="ffmpegp-logo" />
+  <img src="https://github.com/user-attachments/assets/76839d9d-c21d-447b-82ac-9823d0653162" alt="ffmpegp-logo" />
 </kbd>
 </div><br>
 
@@ -49,7 +49,7 @@ ffmpegp -i <file_path> [options]
 | `--stdout`  | Print only plain text without any colored output.       |
 | `--jq`      | Query specific JSON data (e.g.,`format.filename`).    |
 | `--dir`     | Enable multi-file processing mode in a directory.       |
-| `--format`  | Specify file format when using `--dir`(default: all). |
+| `--format`  | Set specific file format to find. (works with '--dir' tag) (default: all) (e.g., --format=mp4). |
 
 ## Example Commands
 
