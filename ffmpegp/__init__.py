@@ -55,6 +55,11 @@ def query_json(json_data, json_path):
         print(f"Invalid JSON path or error: {e}")
         return None
 
+def extract_output(path) -> str:
+    output_filename, output_extension = os.path.splitext(path)
+    output_directory, output_template = os.path.split(output_filename)
+    return output_directory, output_filename, output_template, output_extension
+
 def gradient_text(word, colors):
     """
     Apply multiple gradients to the given text.
@@ -126,13 +131,11 @@ def print_progress_bar(start_time, iteration, total, pos_args, prefix='', suffix
         suffix = "|"
 
     if done:
-        if "--stdout" in pos_args:
-            done = f"| {done} |"
-        elif "--colored" in pos_args:
+        if "--colored" in pos_args:
             colors = [(255, 255, 100), (100, 200, 255)] # Yellow -> Cyan
             done = f"| {gradient_text(done, colors)} |"
         else:
-            done = f"\33[92m{done}\33[0m"
+            done = f"| \33[92m{done}\33[0m |"
     else:
         done = "|"
 
@@ -168,10 +171,10 @@ def print_progress_bar(start_time, iteration, total, pos_args, prefix='', suffix
     bar_fill_length = len(re.sub(r'\x1B\[[^m]*m', '', bar_fill))
         
     if prev_bar_fill_length is not None and bar_fill_length != prev_bar_fill_length:
-        print("\r" + " " * prev_bar_fill_length, end="")
+        sys.stdout.write("\r" + " " * prev_bar_fill_length)
     prev_bar_fill_length = bar_fill_length
 
-    print(f'\r' + bar_fill, end="", flush=True)
+    sys.stdout.write(f'\r' + bar_fill)
 
     # Print New Line on Complete
     if iteration == total or int(round(float(percent), 0)) == 100:
@@ -185,8 +188,8 @@ def print_progress_bar(start_time, iteration, total, pos_args, prefix='', suffix
         else:
             bar_fill = f"{prefix}{bar} 100% {done} {formatted_time}"
             
-        print("\r" + " " * bar_fill_length, end="")
-        print(f"\r" + bar_fill)
+        sys.stdout.write("\r" + " " * bar_fill_length)
+        sys.stdout.write(f"\r" + bar_fill)
         return "OK"
 
 def check_file(output_filename, output_path, pos_args, skip=False):
@@ -368,7 +371,7 @@ positional:
 optional:
     \33[92m--jq\33[0m           JSON path to query specific data (e.g., format.filename)
     \33[92m--dir\33[0m          Use this flag to start multi task mode. (default: current directory)
-    \33[92m--format\33[0m       Set specific file format to find. (works with '--dir' tag) (default: all)
+    \33[92m--format\33[0m       Set specific file format to find. (works with '--dir' tag) (default: all) (e.g., --format=mp4)
 
 placeholders:
     \33[92m{}\33[0m: Represents the input filename.
@@ -411,11 +414,12 @@ homepage: \33[4mhttps://github.com/imegeek/ffmpegp\33[0m
 
         if "--dir" in pos_args:
             mode = "multi"
+            formats = opt_args["--format"]
+            
             if opt_args["--dir"]:
                 directory = os.path.abspath(opt_args["--dir"])
             else:
                 directory = os.getcwd()
-                formats = opt_args["--format"]
         
             if not os.path.isdir(directory):
                 print(f"provided '{opt_args['--dir']}' path not exist.")
@@ -440,14 +444,14 @@ homepage: \33[4mhttps://github.com/imegeek/ffmpegp\33[0m
                 input_path = list(map(lambda filename : os.path.abspath(filename), input_filenames))
 
                 if "{}" in output_filename:
-                    output_directory, output_extension = output_filename.split("{}")
+                    output_directory, output_filename, output_template, output_extension = extract_output(output_filename)
 
                     directory, file = os.path.split(input_path[0])
                     file_name, input_extension = os.path.splitext(file)
                     if not output_extension:
                         output_extension = input_extension
 
-                    output_path = os.path.join(output_directory, file_name+output_extension)
+                    output_path = os.path.join(output_directory, output_template.replace("{}", file_name)+output_extension)
                     output_filename = f"\"{output_path}\""
                     args[-1] = output_filename
                 else:
@@ -463,7 +467,7 @@ homepage: \33[4mhttps://github.com/imegeek/ffmpegp\33[0m
                 output_filename = raw_args[-1]
 
                 if any(key for key in input_filenames if "{}" in key) and "{}" in output_filename:
-                    output_directory, output_extension = output_filename.split("{}")
+                    output_directory, output_filename, output_template, output_extension = extract_output(output_filename)
                 else:
                     print("You need to include `{}` as a placeholder for matched file names.")
                     sys.exit(1)
@@ -493,10 +497,12 @@ homepage: \33[4mhttps://github.com/imegeek/ffmpegp\33[0m
                 file_name, input_extension = os.path.splitext(file)
 
                 if not output_extension:
-                    output_extension = input_extension
-                
+                    extension = input_extension
+                else:
+                    extension = output_extension
+
                 input_filename = f"\"{path}\""
-                output_path = os.path.join(output_directory, file_name+output_extension)
+                output_path = os.path.join(output_directory, output_template.replace("{}", file_name)+extension)
                 output_filename = f"\"{output_path}\""
 
                 args[args.index("-i") + 1] = input_filename
